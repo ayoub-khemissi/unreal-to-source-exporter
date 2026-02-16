@@ -400,9 +400,12 @@ time 0
 0 0.000000 0.000000 0.000000 0 0.000000 0.000000
 end""")
 
+                    # 1 Blender meter = 39.3701 Source units (inches)
+                    SOURCE_SCALE = 39.3701
+
                     loc = world_origins.get(obName)
                     if loc:
-                        origin_cmd = f'$origin {loc.x:.6f} {loc.y:.6f} {loc.z:.6f}'
+                        origin_cmd = f'$origin {loc.x * SOURCE_SCALE:.6f} {loc.y * SOURCE_SCALE:.6f} {loc.z * SOURCE_SCALE:.6f}'
                     else:
                         origin_cmd = '$autocenter'
 
@@ -413,7 +416,7 @@ $body studio "{obName}.smd"
 $sequence idle "{obName}_idle"
 $surfaceprop "no_decal"
 {origin_cmd}
-$scale "1.000000\""""
+$scale "{SOURCE_SCALE:.6f}\""""
 
                     for i in range(1, 3):
                         if os.path.isfile(textureOutputAlt + "\\" + obName + f"_lod{i}.smd"):
