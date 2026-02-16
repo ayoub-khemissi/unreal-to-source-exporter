@@ -339,7 +339,7 @@ class UTS_OT_ExportChain(bpy.types.Operator):
                                 mod.angle_limit = math.radians(i == 1 and 10 or 30)
                                 mod.decimate_type = 'DISSOLVE'
 
-                            if ob.data and "polygons" in ob.data and len(ob.data.polygons) > 30:
+                            if ob.data and hasattr(ob.data, "polygons") and len(ob.data.polygons) > 30:
                                 ob.hide_set(True)
 
                     if i == 3:
@@ -350,7 +350,7 @@ class UTS_OT_ExportChain(bpy.types.Operator):
                             obj.select_set(obj.name.find("_collision") != -1)
 
                         for obj in new_scene.collection.objects:
-                            if not obj.hide_viewport and "polygons" in obj.data and len(obj.data.polygons) > 250:
+                            if not obj.hide_viewport and obj.data and hasattr(obj.data, "polygons") and len(obj.data.polygons) > 250:
                                 mod = obj.modifiers.new('dec', 'DECIMATE')
                                 mod.decimate_type = 'DISSOLVE'
                                 mod.delimit = {'UV'}
