@@ -96,13 +96,14 @@ class UTS_OT_ExportChain(bpy.types.Operator):
         if bpy.context.mode != 'OBJECT':
             bpy.ops.object.mode_set(mode='OBJECT')
 
-        # Clear objects not in viewlayer
-        objects_to_delete = [obj for obj in bpy.context.scene.objects if obj.name not in bpy.context.view_layer.objects]
-        bpy.ops.object.select_all(action='DESELECT')
-        for obj in objects_to_delete:
-            obj.select_set(True)
+        # Clear objects not in viewlayer (only in ALL mode to avoid destroying selected objects)
+        if user_selected_names is None:
+            objects_to_delete = [obj for obj in bpy.context.scene.objects if obj.name not in bpy.context.view_layer.objects]
+            bpy.ops.object.select_all(action='DESELECT')
+            for obj in objects_to_delete:
+                obj.select_set(True)
 
-        bpy.ops.object.delete()
+            bpy.ops.object.delete()
 
         if self.prepare_forexport:
             utils.clearMaterialsNames()
@@ -147,6 +148,12 @@ class UTS_OT_ExportChain(bpy.types.Operator):
 
                 obj.rename(name_common)
 
+        # Store world positions before any deduplication/transform
+        world_origins = {}
+        for obj in bpy.data.objects:
+            if obj.type == 'MESH':
+                world_origins[obj.name.split(".")[0]] = obj.location.copy()
+
         modelsData = {}
         m = vmf.ValveMap()
         copyObjects = [obj for obj in bpy.data.objects if self._should_include(obj, user_selected_names)]
@@ -160,7 +167,7 @@ class UTS_OT_ExportChain(bpy.types.Operator):
             if name_common not in modelsData:
                 modelsData[name_common] = obj
                 obj.rename(name_common)
-            else:
+            elif user_selected_names is None:
                 bpy.data.objects.remove(obj, do_unlink=True)
 
         print("Pre-process done")
@@ -390,13 +397,19 @@ class UTS_OT_ExportChain(bpy.types.Operator):
                         0 0.000000 0.000000 0.000000 0 0.000000 0.000000
                         end""")
 
+                        loc = world_origins.get(obName)
+                        if loc:
+                            origin_cmd = f'$origin {loc.x:.6f} {loc.y:.6f} {loc.z:.6f}'
+                        else:
+                            origin_cmd = '$autocenter'
+
                         qcData = f"""$modelname "{prefs.model_prefix}/{obName}.mdl"
                         $cdmaterials "{prefs.material_prefix}_override" "{prefs.material_prefix}"
                         $staticprop
                         $body studio "{obName}.smd"
                         $sequence idle "{obName}_idle"
                         $surfaceprop "no_decal"
-                        $autocenter
+                        {origin_cmd}
                         $scale "1.000000\""""
 
                         for i in range(1, 3):
