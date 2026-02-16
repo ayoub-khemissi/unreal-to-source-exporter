@@ -79,6 +79,10 @@ class UTS_OT_ExportChain(bpy.types.Operator):
     def execute(self, context):
         prefs = get_prefs()
         original_scene_name = bpy.context.scene.name
+
+        os.makedirs(prefs.temp_path, exist_ok=True)
+        os.makedirs(prefs.temp_path_models, exist_ok=True)
+
         utils.clearCollections()
 
         if self.export_mode == 'SELECTED':
