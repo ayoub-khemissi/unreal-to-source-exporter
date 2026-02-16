@@ -405,18 +405,18 @@ end""")
 
                     loc = world_origins.get(obName)
                     if loc:
-                        origin_cmd = f'$origin {loc.x * SOURCE_SCALE:.6f} {loc.y * SOURCE_SCALE:.6f} {loc.z * SOURCE_SCALE:.6f}'
+                        origin_cmd = f'$origin {loc.x * SOURCE_SCALE:.6f} {loc.y * SOURCE_SCALE:.6f} {loc.z * SOURCE_SCALE:.6f} -90'
                     else:
                         origin_cmd = '$autocenter'
 
-                    qcData = f"""$modelname "{prefs.model_prefix}/{obName}.mdl"
+                    qcData = f"""$scale {SOURCE_SCALE:.6f}
+$modelname "{prefs.model_prefix}/{obName}.mdl"
 $cdmaterials "{prefs.material_prefix}_override" "{prefs.material_prefix}"
 $staticprop
 $body studio "{obName}.smd"
 $sequence idle "{obName}_idle"
 $surfaceprop "no_decal"
-{origin_cmd}
-$scale "{SOURCE_SCALE:.6f}\""""
+{origin_cmd}"""
 
                     for i in range(1, 3):
                         if os.path.isfile(textureOutputAlt + "\\" + obName + f"_lod{i}.smd"):
