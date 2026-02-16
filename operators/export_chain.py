@@ -391,51 +391,70 @@ class UTS_OT_ExportChain(bpy.types.Operator):
 
                 for obName in selected:
                     with open(textureOutputAlt + "\\" + obName + "_idle.smd", "w") as f:
-                        f.write("""
-                        version 1
-                        nodes
-                        0 "joint0" -1
-                        end
-                        skeleton
-                        time 0
-                        0 0.000000 0.000000 0.000000 0 0.000000 0.000000
-                        end""")
+                        f.write("""version 1
+nodes
+0 "joint0" -1
+end
+skeleton
+time 0
+0 0.000000 0.000000 0.000000 0 0.000000 0.000000
+end""")
 
-                        loc = world_origins.get(obName)
-                        if loc:
-                            origin_cmd = f'$origin {loc.x:.6f} {loc.y:.6f} {loc.z:.6f}'
-                        else:
-                            origin_cmd = '$autocenter'
+                    loc = world_origins.get(obName)
+                    if loc:
+                        origin_cmd = f'$origin {loc.x:.6f} {loc.y:.6f} {loc.z:.6f}'
+                    else:
+                        origin_cmd = '$autocenter'
 
-                        qcData = f"""$modelname "{prefs.model_prefix}/{obName}.mdl"
-                        $cdmaterials "{prefs.material_prefix}_override" "{prefs.material_prefix}"
-                        $staticprop
-                        $body studio "{obName}.smd"
-                        $sequence idle "{obName}_idle"
-                        $surfaceprop "no_decal"
-                        {origin_cmd}
-                        $scale "1.000000\""""
+                    qcData = f"""$modelname "{prefs.model_prefix}/{obName}.mdl"
+$cdmaterials "{prefs.material_prefix}_override" "{prefs.material_prefix}"
+$staticprop
+$body studio "{obName}.smd"
+$sequence idle "{obName}_idle"
+$surfaceprop "no_decal"
+{origin_cmd}
+$scale "1.000000\""""
 
-                        for i in range(1, 3):
-                            if os.path.isfile(textureOutputAlt + "\\" + obName + f"_lod{i}.smd"):
-                                qcData += f"""
-                                $lod {3500 + (i-1) * 1500}
-                                {{
-                                    replacemodel "{obName}.smd" "{obName}_lod{i}.smd"
-                                }}"""
-
-                        if os.path.isfile(textureOutputAlt + "\\" + obName + "_collision.smd"):
+                    for i in range(1, 3):
+                        if os.path.isfile(textureOutputAlt + "\\" + obName + f"_lod{i}.smd"):
                             qcData += f"""
-                            $collisionmodel "{obName}_collision.smd" {{
-                                $concave
-                                $maxconvexpieces 512
-                                $automass
-                            }}"""
+$lod {3500 + (i-1) * 1500}
+{{
+    replacemodel "{obName}.smd" "{obName}_lod{i}.smd"
+}}"""
 
-                        with open(textureOutputAlt + "\\" + obName + ".qc", "w") as f:
-                            f.write(qcData)
+                    if os.path.isfile(textureOutputAlt + "\\" + obName + "_collision.smd"):
+                        qcData += f"""
+$collisionmodel "{obName}_collision.smd" {{
+    $concave
+    $maxconvexpieces 512
+    $automass
+}}"""
 
-            # Cleanup: create a fresh scene, move all objects back, remove temp scenes
+                    with open(textureOutputAlt + "\\" + obName + ".qc", "w") as f:
+                        f.write(qcData)
+
+                    print(f"[UTS] QC written: {textureOutputAlt}\\{obName}.qc")
+
+            print(f"[UTS] Starting studiomdl compilation for {len(selected)} models...")
+            print(f"[UTS] Models to compile: {selected}")
+
+            results = []
+            for obName in selected:
+                print(f"[UTS] Compiling {obName}...")
+                output = run_process(obName)
+                print(f"[UTS] Output for {obName}:\n{output}\n")
+                if output.count('\n') >= 3:
+                    results.append(output)
+
+            output_log = os.path.join(prefs.temp_path, "output.txt")
+            with open(output_log, "w") as f:
+                f.write("\n\n".join(results))
+
+            subprocess.Popen(["notepad", output_log])
+
+        # Cleanup: restore objects to a clean scene and reset visibility
+        try:
             restore_scene = bpy.data.scenes.new(name=original_scene_name + "_restore")
             bpy.context.window.scene = restore_scene
 
@@ -445,38 +464,11 @@ class UTS_OT_ExportChain(bpy.types.Operator):
                         scene.collection.objects.unlink(obj)
                         if obj.name not in restore_scene.collection.objects:
                             restore_scene.collection.objects.link(obj)
-                        obj.hide_set(False)
                     bpy.data.scenes.remove(scene)
 
-            # Reset visibility on ALL objects in the scene
             for obj in restore_scene.collection.objects:
                 obj.hide_set(False)
-
-            results = []
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future_to_obname = {executor.submit(run_process, ob.name.replace("_lod1", "").replace("_lod2", "")): ob.name.replace("_lod1", "").replace("_lod2", "") for ob in bpy.data.objects if not ob.name.endswith("_collision") and self._should_include(ob, user_selected_names)}
-
-                try:
-                    for future in concurrent.futures.as_completed(future_to_obname, timeout=900):
-                        obName = future_to_obname[future]
-                        try:
-                            output = future.result()
-                            print(f"[UTS] Output for {obName}:\n{output}\n")
-
-                            if output.count('\n') < 3:
-                                continue
-                            results.append(output)
-                        except Exception as exc:
-                            print(f"[UTS] Subprocess for {obName} generated an exception: {exc}")
-                            results.append(str(exc))
-                except Exception as exc:
-                    print(f"[UTS] Subprocess generated an exception: {exc}")
-                    results.append(str(exc))
-
-            output_log = os.path.join(prefs.temp_path, "output.txt")
-            with open(output_log, "w") as f:
-                f.write("\n\n".join(results))
-
-            subprocess.Popen(["notepad", output_log])
+        except Exception as e:
+            print(f"[UTS] Cleanup error (non-fatal): {e}")
 
         return {'FINISHED'}

@@ -60,8 +60,8 @@ class UTS_Prefs(AddonPreferences):
 
     model_prefix: StringProperty(
         name='Prefixe modeles',
-        description='Chemin relatif dans models/ (ex: output/models -> models/output/models/)',
-        default='output/models'
+        description='Chemin relatif dans models/ (ex: output -> models/output/)',
+        default='output'
     )
 
     # --- Options shader ---
