@@ -435,21 +435,18 @@ class UTS_OT_ExportChain(bpy.types.Operator):
                         with open(textureOutputAlt + "\\" + obName + ".qc", "w") as f:
                             f.write(qcData)
 
-            # Cleanup: restore objects to original scene and reset visibility
-            orig_scene = bpy.data.scenes.get(original_scene_name)
-            if not orig_scene:
-                orig_scene = bpy.data.scenes.new(name=original_scene_name)
+            # Cleanup: create a fresh scene, move all objects back, remove temp scenes
+            restore_scene = bpy.data.scenes.new(name=original_scene_name + "_restore")
+            bpy.context.window.scene = restore_scene
 
             for scene in list(bpy.data.scenes):
                 if scene.name.startswith("SubprojectScene_"):
                     for obj in list(scene.collection.objects):
                         scene.collection.objects.unlink(obj)
-                        if obj.name not in orig_scene.collection.objects:
-                            orig_scene.collection.objects.link(obj)
+                        if obj.name not in restore_scene.collection.objects:
+                            restore_scene.collection.objects.link(obj)
                         obj.hide_set(False)
                     bpy.data.scenes.remove(scene)
-
-            bpy.context.window.scene = orig_scene
 
             results = []
             with concurrent.futures.ThreadPoolExecutor() as executor:
