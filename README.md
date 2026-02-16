@@ -20,12 +20,37 @@ Blender add-on for exporting Unreal Engine assets to the Source 1 engine (Garry'
 
 ## Installation
 
+### 1. Install Python dependencies
+
+The add-on requires Python packages that are not bundled with Blender. You must install them using **Blender's built-in Python** (not your system Python).
+
+> **Important:** Run the command prompt **as Administrator**, and make sure to also **launch Blender as Administrator** afterwards for the packages to be accessible.
+
+Open a command prompt as Administrator and run:
+
+```
+"C:\Program Files\Blender Foundation\Blender 4.3\4.3\python\bin\python.exe" -m pip install Pillow imageio numpy srctools vmflib
+```
+
+> Adjust the path above to match your Blender version (e.g. `4.0`, `4.1`, `4.2`, etc.).
+
+### 2. Install Blender Source Tools
+
+The add-on depends on **Blender Source Tools** (`io_scene_valvesource`) which must be installed **before** this add-on.
+
+1. Download Blender Source Tools from: http://steamreview.org/BlenderSourceTools/
+2. In Blender, go to **Edit > Preferences > Add-ons**
+3. Click **Install...** and select the downloaded `.zip` file
+4. Enable the **Blender Source Tools** add-on
+
+### 3. Install Unreal to Source Exporter
+
 1. Download or clone this repository.
 2. Copy the `unreal_to_source_exporter/` folder into your Blender addons directory:
    ```
    %APPDATA%\Blender Foundation\Blender\<version>\scripts\addons\
    ```
-3. Open Blender, go to **Edit > Preferences > Add-ons**, search for **"Unreal to Source Exporter"** and enable it.
+3. Open Blender **as Administrator**, go to **Edit > Preferences > Add-ons**, search for **"Unreal to Source Exporter"** and enable it.
 4. Configure paths in the add-on preferences (GarrysMod, VTex, CoACD, temp directories).
 
 ## Configuration
