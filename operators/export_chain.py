@@ -448,6 +448,10 @@ class UTS_OT_ExportChain(bpy.types.Operator):
                         obj.hide_set(False)
                     bpy.data.scenes.remove(scene)
 
+            # Reset visibility on ALL objects in the scene
+            for obj in restore_scene.collection.objects:
+                obj.hide_set(False)
+
             results = []
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 future_to_obname = {executor.submit(run_process, ob.name.replace("_lod1", "").replace("_lod2", "")): ob.name.replace("_lod1", "").replace("_lod2", "") for ob in bpy.data.objects if not ob.name.endswith("_collision") and self._should_include(ob, user_selected_names)}
