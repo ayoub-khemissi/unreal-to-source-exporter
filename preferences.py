@@ -54,14 +54,14 @@ class UTS_Prefs(AddonPreferences):
 
     material_prefix: StringProperty(
         name='Prefixe materiaux',
-        description='Chemin relatif dans materials/ (ex: sanji/bbr -> materials/sanji/bbr/)',
-        default='sanji/bbr'
+        description='Chemin relatif dans materials/ (ex: output/materials -> materials/output/materials/)',
+        default='output/materials'
     )
 
     model_prefix: StringProperty(
         name='Prefixe modeles',
-        description='Chemin relatif dans models/ (ex: sanji/bbr -> models/sanji/bbr/)',
-        default='sanji/bbr'
+        description='Chemin relatif dans models/ (ex: output/models -> models/output/models/)',
+        default='output/models'
     )
 
     # --- Options shader ---
