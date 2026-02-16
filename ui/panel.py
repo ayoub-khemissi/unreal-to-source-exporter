@@ -95,7 +95,14 @@ class UTS_PT_MainPanel(bpy.types.Panel):
         row.label(text="Export", icon='EXPORT')
         col = box.column(align=True)
         col.scale_y = 1.4
-        col.operator("uts.export_chain", text="Export Chain", icon='PLAY')
+        row = col.row(align=True)
+        op_all = row.operator("uts.export_chain", text="Export All", icon='PLAY')
+        op_all.export_mode = 'ALL'
+        op_sel = row.operator("uts.export_chain", text="Export Selected", icon='RESTRICT_SELECT_OFF')
+        op_sel.export_mode = 'SELECTED'
+        sel_count = len([o for o in context.selected_objects if o.type == 'MESH'])
+        if sel_count > 0:
+            col.label(text=f"{sel_count} mesh(es) selectionne(s)", icon='INFO')
         col.separator()
         col.operator("uts.ue_texture_export", text="UE Textures -> Source", icon='TEXTURE')
         col.operator("uts.gta_texture_export", text="GTA Textures -> Source", icon='TEXTURE')

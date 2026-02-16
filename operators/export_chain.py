@@ -5,7 +5,7 @@ import re
 import subprocess
 
 import bpy
-from bpy.props import BoolProperty
+from bpy.props import BoolProperty, EnumProperty
 from vmflib import vmf
 
 from .. import utils
@@ -21,6 +21,15 @@ class UTS_OT_ExportChain(bpy.types.Operator):
     bl_options = {'REGISTER'}
 
     addLayout = 'VIEW3D_MT_object'
+
+    export_mode: EnumProperty(
+        name="Mode d'export",
+        items=[
+            ('ALL', "Tous les objets", "Exporter tous les meshes de la scene"),
+            ('SELECTED', "Selection", "Exporter uniquement les meshes selectionnes"),
+        ],
+        default='ALL',
+    )
 
     prepare_forexport: BoolProperty(
         name="prepare_forexport",
@@ -50,6 +59,10 @@ class UTS_OT_ExportChain(bpy.types.Operator):
         layout = self.layout
 
         col = layout.column()
+        col.label(text='Mode:')
+        col.prop(self, "export_mode", expand=True)
+        layout.separator()
+        col = layout.column()
         col.label(text='Parameters:')
         col.prop(self, "prepare_forexport")
         col.prop(self, "output_vmf")
@@ -58,9 +71,27 @@ class UTS_OT_ExportChain(bpy.types.Operator):
         layout.separator()
         col = layout.column()
 
+    def _should_include(self, obj, user_selected_names):
+        if user_selected_names is None:
+            return True
+        return obj.name.split(".")[0] in user_selected_names
+
     def execute(self, context):
         prefs = get_prefs()
+        original_scene_name = bpy.context.scene.name
         utils.clearCollections()
+
+        if self.export_mode == 'SELECTED':
+            user_selected_names = set()
+            for obj in bpy.context.selected_objects:
+                base_name = obj.name.split(".")[0]
+                user_selected_names.add(base_name)
+                user_selected_names.add(base_name + "_collision")
+            if not user_selected_names:
+                self.report({'WARNING'}, "Aucun objet selectionne.")
+                return {'CANCELLED'}
+        else:
+            user_selected_names = None
 
         if bpy.context.mode != 'OBJECT':
             bpy.ops.object.mode_set(mode='OBJECT')
@@ -81,6 +112,8 @@ class UTS_OT_ExportChain(bpy.types.Operator):
             listObjects = []
 
             for obj in bpy.data.objects:
+                if not self._should_include(obj, user_selected_names):
+                    continue
                 if obj.type == 'MESH' and obj.name.find("Replaced") == -1 or (obj.name.find("col") != -1 and obj.name.find("collision") == -1)\
                         or not obj.name in bpy.context.view_layer.objects or obj.hide_render or obj.hide_get():
                     listObjects.append(obj)
@@ -102,7 +135,7 @@ class UTS_OT_ExportChain(bpy.types.Operator):
             bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='BOUNDS')
             print("Origin geometry centered")
 
-            copyObjects = [obj for obj in bpy.data.objects]
+            copyObjects = [obj for obj in bpy.data.objects if self._should_include(obj, user_selected_names)]
             for obj in copyObjects:
                 if obj.type != 'MESH':
                     continue
@@ -116,7 +149,7 @@ class UTS_OT_ExportChain(bpy.types.Operator):
 
         modelsData = {}
         m = vmf.ValveMap()
-        copyObjects = [obj for obj in bpy.data.objects]
+        copyObjects = [obj for obj in bpy.data.objects if self._should_include(obj, user_selected_names)]
 
         for obj in copyObjects:
             name_common = obj.name.split(".")[0]
@@ -145,7 +178,7 @@ class UTS_OT_ExportChain(bpy.types.Operator):
 
         if self.export_models:
             print("Start: Export Models")
-            copyObjects = [obj for obj in bpy.data.objects]
+            copyObjects = [obj for obj in bpy.data.objects if self._should_include(obj, user_selected_names)]
             selected = []
             bpy.ops.object.select_all(action='DESELECT')
 
@@ -208,7 +241,7 @@ class UTS_OT_ExportChain(bpy.types.Operator):
 
             bpy.ops.object.select_all(action='DESELECT')
             selected = []
-            copyObjects = [obj for obj in bpy.data.objects]
+            copyObjects = [obj for obj in bpy.data.objects if self._should_include(obj, user_selected_names)]
 
             for ob in copyObjects:
                 if ob.name not in bpy.context.view_layer.objects:
@@ -222,6 +255,8 @@ class UTS_OT_ExportChain(bpy.types.Operator):
             buffer = []
 
             for obj in bpy.data.objects:
+                if not self._should_include(obj, user_selected_names):
+                    continue
                 if obj.name.endswith("_collision"):
                     continue
 
@@ -383,9 +418,25 @@ class UTS_OT_ExportChain(bpy.types.Operator):
                         with open(textureOutputAlt + "\\" + obName + ".qc", "w") as f:
                             f.write(qcData)
 
+            # Cleanup: restore objects to original scene and reset visibility
+            orig_scene = bpy.data.scenes.get(original_scene_name)
+            if not orig_scene:
+                orig_scene = bpy.data.scenes.new(name=original_scene_name)
+
+            for scene in list(bpy.data.scenes):
+                if scene.name.startswith("SubprojectScene_"):
+                    for obj in list(scene.collection.objects):
+                        scene.collection.objects.unlink(obj)
+                        if obj.name not in orig_scene.collection.objects:
+                            orig_scene.collection.objects.link(obj)
+                        obj.hide_set(False)
+                    bpy.data.scenes.remove(scene)
+
+            bpy.context.window.scene = orig_scene
+
             results = []
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                future_to_obname = {executor.submit(run_process, ob.name.replace("_lod1", "").replace("_lod2", "")): ob.name.replace("_lod1", "").replace("_lod2", "") for ob in bpy.data.objects if not ob.name.endswith("_collision")}
+                future_to_obname = {executor.submit(run_process, ob.name.replace("_lod1", "").replace("_lod2", "")): ob.name.replace("_lod1", "").replace("_lod2", "") for ob in bpy.data.objects if not ob.name.endswith("_collision") and self._should_include(ob, user_selected_names)}
 
                 try:
                     for future in concurrent.futures.as_completed(future_to_obname, timeout=900):

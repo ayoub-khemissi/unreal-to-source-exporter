@@ -39,14 +39,14 @@ class UTS_Prefs(AddonPreferences):
     temp_path: StringProperty(
         name='Dossier temporaire',
         description='Dossier pour les fichiers temporaires d\'export (QC, SMD, VMF)',
-        default='C:\\uts_temp\\',
+        default='C:\\output\\',
         subtype='DIR_PATH'
     )
 
     temp_path_models: StringProperty(
         name='Dossier temporaire modeles',
         description='Dossier pour les modeles compiles temporaires (SMD)',
-        default='C:\\uts_temp\\compiled_models\\',
+        default='C:\\output\\',
         subtype='DIR_PATH'
     )
 
