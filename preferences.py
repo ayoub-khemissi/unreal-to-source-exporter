@@ -54,8 +54,8 @@ class UTS_Prefs(AddonPreferences):
 
     material_prefix: StringProperty(
         name='Prefixe materiaux',
-        description='Chemin relatif dans materials/ (ex: output/materials -> materials/output/materials/)',
-        default='output/materials'
+        description='Chemin relatif dans materials/ (ex: output -> materials/output/)',
+        default='output'
     )
 
     model_prefix: StringProperty(
