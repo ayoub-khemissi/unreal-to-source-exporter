@@ -461,13 +461,21 @@ $collisionmodel "{obName}_collision.smd" {{
             restore_scene = bpy.data.scenes.new(name=original_scene_name + "_restore")
             bpy.context.window.scene = restore_scene
 
+            # First pass: collect all objects from temp scenes and link to restore
+            for obj in list(bpy.data.objects):
+                try:
+                    if obj.name not in restore_scene.collection.objects:
+                        restore_scene.collection.objects.link(obj)
+                except Exception:
+                    pass
+
+            # Second pass: remove temp scenes (now safe, objects are already linked elsewhere)
             for scene in list(bpy.data.scenes):
                 if scene.name.startswith("SubprojectScene_"):
-                    for obj in list(scene.collection.objects):
-                        scene.collection.objects.unlink(obj)
-                        if obj.name not in restore_scene.collection.objects:
-                            restore_scene.collection.objects.link(obj)
-                    bpy.data.scenes.remove(scene)
+                    try:
+                        bpy.data.scenes.remove(scene)
+                    except Exception:
+                        pass
 
             for obj in restore_scene.collection.objects:
                 obj.hide_set(False)
